@@ -1,6 +1,9 @@
 package db
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestGenerateSqlByStructFieldNames(t *testing.T) {
 	type Person struct {
@@ -17,4 +20,12 @@ func TestGenerateSqlByStructFieldNames(t *testing.T) {
 	dest := []Student{}
 	query = GenerateQueryFieldByStructFieldNames(dest, query)
 	t.Log(query)
+}
+
+func TestSqlHelper_DoUpdate(t *testing.T) {
+	sql := "update place {{update_field}}"
+	sqlHelper := NewSqlHelper(sql)
+	sqlHelper.AddUpdateField("country", "中国")
+	err := sqlHelper.DoUpdate()
+	assert.Nil(t, err)
 }

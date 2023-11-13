@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -28,6 +29,42 @@ func getDbTagFromField(field reflect.StructField) []string {
 	}
 }
 
-func GenerateUpdateField() {
+type SqlHelper struct {
+	sql             string
+	updateParamList []UpdateParam
+}
 
+type UpdateParam struct {
+	FieldName string
+	Value     any
+}
+
+func (h *SqlHelper) AddUpdateField(fieldName string, value any) {
+	h.updateParamList = append(h.updateParamList, UpdateParam{
+		FieldName: fieldName,
+		Value:     value,
+	})
+}
+
+func (h *SqlHelper) getUpdateFieldNameAndValue() ([]string, []any) {
+	updateField := make([]string, 0)
+	value := make([]any, 0)
+	for _, param := range h.updateParamList {
+		updateField = append(updateField, fmt.Sprintf("%s = ?", param.FieldName))
+		value = append(value, param.Value)
+	}
+	return updateField, value
+}
+
+func (h *SqlHelper) DoUpdate() error {
+	fieldNames, values := h.getUpdateFieldNameAndValue()
+	updateSql := strings.ReplaceAll(h.sql, "{{update_field}}", "set "+strings.Join(fieldNames, ","))
+	_, err := GetDbInstance().Exec(updateSql, values...)
+	return err
+}
+
+func NewSqlHelper(sql string) SqlHelper {
+	return SqlHelper{
+		sql: sql,
+	}
 }
