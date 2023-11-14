@@ -6,25 +6,33 @@ import (
 	"time"
 )
 
-var dbInstance *sqlx.DB
+var dbHandler *DatabaseHandler
 
 var initOnce sync.Once
 
-func GetDbInstance() *sqlx.DB {
+func GetDbInstance() *DatabaseHandler {
 	initOnce.Do(func() {
-		open, err := sqlx.Open("mysql", "root:_pc233508@tcp(127.0.0.1:3306)/vhr")
+		dbInstance, err := sqlx.Open("mysql", "root:_pc233508@tcp(127.0.0.1:3306)/vhr")
 		if err != nil {
 			panic(err)
 		}
-		err = open.Ping()
+		err = dbInstance.Ping()
 		if err != nil {
 			panic(err)
 		}
-		open.SetConnMaxLifetime(time.Minute * 5)
-		open.SetMaxOpenConns(2)
-		open.SetMaxIdleConns(1)
-		open.SetConnMaxIdleTime(time.Minute)
-		dbInstance = open
+		dbInstance.SetConnMaxLifetime(time.Minute * 5)
+		dbInstance.SetMaxOpenConns(2)
+		dbInstance.SetMaxIdleConns(1)
+		dbInstance.SetConnMaxIdleTime(time.Minute)
+		dbHandler = &DatabaseHandler{
+			DBInstance: dbInstance,
+			cache:      sync.Map{},
+		}
 	})
-	return dbInstance
+	return dbHandler
+}
+
+type DatabaseHandler struct {
+	DBInstance *sqlx.DB
+	cache      sync.Map
 }
