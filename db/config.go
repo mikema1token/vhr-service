@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"errors"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/singleflight"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -30,7 +30,10 @@ func GetDbInstance() *DatabaseHandler {
 		dbInstance.SetConnMaxIdleTime(time.Minute)
 		dbHandler = &DatabaseHandler{
 			DBInstance: dbInstance,
-			cache:      sync.Map{},
+			DbCache: Cache{
+				store: nil,
+			},
+			Rq: singleflight.Group{},
 		}
 	})
 	return dbHandler
@@ -38,62 +41,56 @@ func GetDbInstance() *DatabaseHandler {
 
 type DatabaseHandler struct {
 	DBInstance *sqlx.DB
-	cache      sync.Map
+	DbCache    Cache
+	Rq         singleflight.Group
 }
 
-func (d *DatabaseHandler) SelectWithCache(dest any, query string, args ...interface{}) error {
-	key := fmt.Sprintf("%s #@$ %s", query, fmt.Sprint(args))
-	value, ok := d.cache.Load(key)
-	if ok {
-		reflect.Copy(reflect.ValueOf(dest), reflect.ValueOf(value))
-		return nil
-	} else {
-		err := d.DBInstance.Select(dest, query, args...)
+func (d *DatabaseHandler) Select(dest any, query string, args ...interface{}) error {
+	err := d.DBInstance.Select(dest, query, args...)
+	return err
+}
+
+func (d *DatabaseHandler) Exec(sql string, args ...interface{}) error {
+	_, err := d.DBInstance.Exec(sql, args)
+	return err
+}
+
+type Cache struct {
+	store      cacheStore
+	expireTime time.Duration
+}
+
+type cacheStore interface {
+	Get(string) (string, error)
+	Set(string, string, int) error
+	Del(string) error
+}
+
+func (c *Cache) Del(ctx context.Context, keys ...string) error {
+	for i := 0; i < len(keys); i++ {
+		err := c.store.Del(keys[i])
 		if err != nil {
-			return err
+			c.DelRetry(ctx, keys[i], err)
 		}
-		d.cache.Store(key, dest)
-		return nil
-	}
-}
-
-func (d *DatabaseHandler) Exec(sql string, tableName string, args ...interface{}) error {
-	result, err := d.DBInstance.Exec(sql, args)
-	if err != nil {
-		return err
-	}
-	lastInsertId, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if lastInsertId != 0 || rowsAffected != 0 {
-
 	}
 	return nil
 }
 
-type cache struct {
-	store      sync.Map
-	expireTime time.Duration
-	barrier    singleflight.Group
+func (c *Cache) DelRetry(ctx context.Context, key string, err error) {
 }
 
-func (c *cache) Del(ctx context.Context, keys ...string) error {
+var CacheIsNil = errors.New("nil Cache")
 
+func (c *Cache) Get(ctx context.Context, key string, val any) error {
+	value, err := c.store.Get(key)
+	err = json.Unmarshal([]byte(value), val)
+	return err
 }
 
-func (c *cache) Get(ctx context.Context, key string, val any) error {
-
-}
-
-func (c *cache) Set(ctx context.Context, key string, val any) error {
-
-}
-
-func (c *cache) GetAndUpdate() {
-
+func (c *Cache) Set(ctx context.Context, key string, val any) error {
+	marshal, err := json.Marshal(val)
+	if err != nil {
+		return err
+	}
+	return c.store.Set(key, string(marshal), int(c.expireTime))
 }

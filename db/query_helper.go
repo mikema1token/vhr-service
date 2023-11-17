@@ -24,7 +24,6 @@ type SqlHelper struct {
 	sql             string
 	updateParamList []Param
 	whereParam      []Param
-	tableCache      []string
 }
 
 type Param struct {
@@ -51,15 +50,15 @@ func NewSqlHelper(sql string) *SqlHelper {
 	}
 }
 
-func (h *SqlHelper) DoQuery(dest any) error {
-	h.replaceSelectField(dest)
-	args := h.replaceWhereField()
-	if len(h.tableCache) != 0 {
-		return h.databaseHandler.SelectWithCache(dest, h.sql, args...)
-	} else {
-		return h.databaseHandler.DBInstance.Select(dest, h.sql, args...)
-	}
-}
+//func (h *SqlHelper) DoQuery(dest any) error {
+//	h.replaceSelectField(dest)
+//	args := h.replaceWhereField()
+//	if len(h.tableCache) != 0 {
+//		return h.databaseHandler.SelectWithCache(dest, h.sql, args...)
+//	} else {
+//		return h.databaseHandler.DBInstance.Select(dest, h.sql, args...)
+//	}
+//}
 
 func (h *SqlHelper) replaceWhereField() []any {
 	conditions := make([]string, 0)
@@ -105,8 +104,4 @@ func (h *SqlHelper) replaceUpdateField() []any {
 	}
 	h.sql = strings.ReplaceAll(h.sql, "{{update_field}}", "set "+strings.Join(conditions, ","))
 	return args
-}
-
-func (h *SqlHelper) CacheTable(table []string) {
-	h.tableCache = append(h.tableCache, table...)
 }
