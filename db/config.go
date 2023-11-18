@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/singleflight"
+	"log"
 	"sync"
 	"time"
 )
@@ -31,7 +33,8 @@ func GetDbInstance() *DatabaseHandler {
 		dbHandler = &DatabaseHandler{
 			DBInstance: dbInstance,
 			DbCache: Cache{
-				store: nil,
+				store:      GetRedisInstance(),
+				expireTime: 0,
 			},
 			Rq: singleflight.Group{},
 		}
@@ -45,18 +48,47 @@ type DatabaseHandler struct {
 	Rq         singleflight.Group
 }
 
-func (d *DatabaseHandler) Select(dest any, query string, args ...interface{}) error {
-	err := d.DBInstance.Select(dest, query, args...)
-	return err
+func (d *DatabaseHandler) SelectWithCache(dest any, key, query string, args ...interface{}) error {
+	if key == "" {
+		err3 := d.DBInstance.Select(dest, query, args...)
+		return err3
+	} else {
+		err2 := d.DbCache.Get(key, dest)
+		if err2 == nil {
+			return nil
+		}
+		if !errors.Is(err2, redis.Nil) {
+			return err2
+		}
+		_, err, _ := d.Rq.Do(key, func() (interface{}, error) {
+			err3 := d.DbCache.Get(key, dest)
+			if errors.Is(err3, redis.Nil) {
+				err3 := d.DBInstance.Select(dest, query, args...)
+				if err3 != nil {
+					return nil, err3
+				} else {
+					err := d.DbCache.Set(key, dest)
+					return nil, err
+				}
+			} else {
+				return nil, err3
+			}
+		})
+		return err
+	}
 }
 
-func (d *DatabaseHandler) Exec(sql string, args ...interface{}) error {
+func (d *DatabaseHandler) Exec(sql, key string, args ...interface{}) error {
 	_, err := d.DBInstance.Exec(sql, args)
-	return err
+	if key != "" {
+		return d.DbCache.Del(key)
+	} else {
+		return err
+	}
 }
 
 type Cache struct {
-	store      cacheStore
+	store      *redis.Client
 	expireTime time.Duration
 }
 
@@ -66,31 +98,38 @@ type cacheStore interface {
 	Del(string) error
 }
 
-func (c *Cache) Del(ctx context.Context, keys ...string) error {
-	for i := 0; i < len(keys); i++ {
-		err := c.store.Del(keys[i])
-		if err != nil {
-			c.DelRetry(ctx, keys[i], err)
-		}
-	}
-	return nil
+func (c *Cache) Del(keys ...string) error {
+	intCmd := c.store.Del(context.Background(), keys...)
+	return intCmd.Err()
 }
 
-func (c *Cache) DelRetry(ctx context.Context, key string, err error) {
+func (c *Cache) DelRetry(key string, err error) {
 }
 
 var CacheIsNil = errors.New("nil Cache")
 
-func (c *Cache) Get(ctx context.Context, key string, val any) error {
-	value, err := c.store.Get(key)
-	err = json.Unmarshal([]byte(value), val)
-	return err
+func (c *Cache) Get(key string, val any) error {
+	cmd := c.store.Get(context.Background(), key)
+	if cmd.Err() != nil {
+		return cmd.Err()
+	}
+	log.Print("cache hit")
+	bytes, _ := cmd.Bytes()
+	return json.Unmarshal(bytes, val)
 }
 
-func (c *Cache) Set(ctx context.Context, key string, val any) error {
-	marshal, err := json.Marshal(val)
-	if err != nil {
-		return err
+func (c *Cache) Set(key string, val any) error {
+	b, _ := json.Marshal(val)
+	return c.store.Set(context.Background(), key, b, 0).Err()
+}
+
+func GetRedisInstance() *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr: "127.0.0.1:6379",
+	})
+	ping := client.Ping(context.Background())
+	if ping.Err() != nil {
+		panic(ping.Err())
 	}
-	return c.store.Set(key, string(marshal), int(c.expireTime))
+	return client
 }

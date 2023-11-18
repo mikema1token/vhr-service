@@ -50,16 +50,6 @@ func NewSqlHelper(sql string) *SqlHelper {
 	}
 }
 
-//func (h *SqlHelper) DoQuery(dest any) error {
-//	h.replaceSelectField(dest)
-//	args := h.replaceWhereField()
-//	if len(h.tableCache) != 0 {
-//		return h.databaseHandler.SelectWithCache(dest, h.sql, args...)
-//	} else {
-//		return h.databaseHandler.DBInstance.Select(dest, h.sql, args...)
-//	}
-//}
-
 func (h *SqlHelper) replaceWhereField() []any {
 	conditions := make([]string, 0)
 	args := make([]any, 0)
@@ -69,14 +59,6 @@ func (h *SqlHelper) replaceWhereField() []any {
 	}
 	h.sql = strings.ReplaceAll(h.sql, "{{where_field}}", strings.Join(conditions, " and "))
 	return args
-}
-
-func (h *SqlHelper) Update() error {
-	args := h.replaceUpdateField()
-	t := h.replaceWhereField()
-	args = append(args, t...)
-	_, err := h.databaseHandler.DBInstance.Exec(h.sql, args...)
-	return err
 }
 
 func (h *SqlHelper) AddUpdateField(fieldName, cmp string, value any) {
@@ -104,4 +86,22 @@ func (h *SqlHelper) replaceUpdateField() []any {
 	}
 	h.sql = strings.ReplaceAll(h.sql, "{{update_field}}", "set "+strings.Join(conditions, ","))
 	return args
+}
+
+func (h *SqlHelper) Update(key string) error {
+	args := h.replaceUpdateField()
+	t := h.replaceWhereField()
+	args = append(args, t...)
+	err := h.databaseHandler.Exec(h.sql, key, args...)
+	return err
+}
+
+func (h *SqlHelper) DoQuery(dest any, key string) error {
+	h.replaceSelectField(dest)
+	args := h.replaceWhereField()
+	if key != "" {
+		return h.databaseHandler.SelectWithCache(dest, key, h.sql, args)
+	} else {
+		return h.databaseHandler.DBInstance.Select(dest, h.sql, args)
+	}
 }
