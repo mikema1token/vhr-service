@@ -100,8 +100,8 @@ func (h *SqlHelper) DoQuery(dest any, key string) error {
 	h.replaceSelectField(dest)
 	args := h.replaceWhereField()
 	if key != "" {
-		return h.databaseHandler.SelectWithCache(dest, key, h.sql, args)
+		return h.databaseHandler.SelectWithCache(dest, key, h.sql, args...)
 	} else {
-		return h.databaseHandler.DBInstance.Select(dest, h.sql, args)
+		return h.databaseHandler.DBInstance.Select(dest, h.sql, args...)
 	}
 }

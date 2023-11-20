@@ -2,12 +2,14 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/singleflight"
 	"log"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -67,6 +69,9 @@ func (d *DatabaseHandler) SelectWithCache(dest any, key, query string, args ...i
 				if err3 != nil {
 					return nil, err3
 				} else {
+					if 0 == reflect.ValueOf(dest).Elem().Len() {
+						return nil, sql.ErrNoRows
+					}
 					err := d.DbCache.Set(key, dest)
 					return nil, err
 				}
