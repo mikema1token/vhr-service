@@ -27,3 +27,11 @@ func GetUserModelByName(name string) (UserModel, error) {
 		return r[0], err
 	}
 }
+
+func GetUserList() ([]UserModel, error) {
+	dbInstance := GetDbInstance()
+	var userList []UserModel
+	querySql := "select * from hr"
+	err := dbInstance.DBInstance.Select(&userList, querySql)
+	return userList, err
+}
