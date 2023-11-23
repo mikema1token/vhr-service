@@ -19,7 +19,7 @@ func main() {
 		}
 	})
 	authGroup.POST("", nil)
-	engine.Run()
+	engine.Run(":8081")
 }
 
 func registerAuthApiRouter(engine *gin.Engine) {

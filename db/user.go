@@ -18,9 +18,9 @@ type UserModel struct {
 func GetUserModelByName(name string) (UserModel, error) {
 	query := `select {{select_field}} from hr where {{where_field}}`
 	sqlHelper := NewSqlHelper(query)
-	sqlHelper.AddWhereParam("name", "=", name)
+	sqlHelper.AddWhereParam("username", "=", name)
 	var r []UserModel
-	err := sqlHelper.DoQuery(&r, "hr.name:"+name)
+	err := sqlHelper.DoQuery(&r, "hr.username:"+name)
 	if err != nil {
 		return UserModel{}, err
 	} else {
