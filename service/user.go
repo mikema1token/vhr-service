@@ -24,10 +24,20 @@ func UserLogin(ctx *gin.Context) {
 	}
 	if userModel.Password == q.Password {
 		ctx.SetCookie("token", q.UserName+q.Password, 3600*24, "/", "localhost", false, true)
-		ctx.JSON(http.StatusOK, gin.H{"message": "ok"})
+		ctx.JSON(http.StatusOK, userModel)
 		return
 	} else {
 		ctx.JSON(http.StatusInternalServerError, errors.New("invalid username or password"))
 		return
 	}
+}
+
+func UserLogout(c *gin.Context) {
+	cookie, err := c.Cookie("token")
+	if err != nil {
+		c.JSON(500, gin.H{"err": err})
+		return
+	}
+	c.SetCookie("token", cookie, 1, "/", "localhost", false, true)
+	c.JSON(200, gin.H{"status": "ok"})
 }

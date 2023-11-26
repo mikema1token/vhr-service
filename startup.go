@@ -9,6 +9,7 @@ import (
 func main() {
 	engine := gin.Default()
 	engine.POST("/login", service.UserLogin)
+	engine.POST("/logout", service.UserLogout)
 	authGroup := engine.Group("/user", func(c *gin.Context) {
 		_, err := c.Cookie("token")
 		if err != nil {
@@ -20,8 +21,4 @@ func main() {
 	})
 	authGroup.POST("", nil)
 	engine.Run(":8081")
-}
-
-func registerAuthApiRouter(engine *gin.Engine) {
-
 }
