@@ -19,6 +19,6 @@ func main() {
 			c.Next()
 		}
 	})
-	authGroup.POST("", nil)
+	authGroup.GET("list-router", service.GetMenuTree)
 	engine.Run(":8081")
 }
