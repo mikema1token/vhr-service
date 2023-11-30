@@ -20,5 +20,7 @@ func main() {
 		}
 	})
 	authGroup.GET("list-router", service.GetMenuTree)
+	authGroup.GET("/list-pos", service.ListPosition)
+	authGroup.POST("/add-pos", service.AddPosition)
 	engine.Run(":8081")
 }
