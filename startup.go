@@ -22,5 +22,6 @@ func main() {
 	authGroup.GET("list-router", service.GetMenuTree)
 	authGroup.GET("/list-pos", service.ListPosition)
 	authGroup.POST("/add-pos", service.AddPosition)
+	authGroup.POST("/delete-pos", service.DelPos)
 	engine.Run(":8081")
 }

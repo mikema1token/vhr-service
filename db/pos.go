@@ -19,6 +19,12 @@ func ListPosition() ([]Position, error) {
 
 func AddPosition(name string) error {
 	dbInstance := GetDbInstance()
-	_, err := dbInstance.DBInstance.Exec("insert into position(name) values(?)", name)
+	_, err := dbInstance.DBInstance.Exec("insert into position (name,createDate,enabled) values (?,?,?)", name, time.Now(), 1)
+	return err
+}
+
+func DelPosition(id int) error {
+	instance := GetDbInstance()
+	_, err := instance.DBInstance.Exec("delete from position where id = ?", id)
 	return err
 }

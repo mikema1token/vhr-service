@@ -30,3 +30,20 @@ func AddPosition(c *gin.Context) {
 		}
 	}
 }
+
+func DelPos(c *gin.Context) {
+	req := struct {
+		Id int
+	}{}
+	err := c.ShouldBind(&req)
+	if err != nil {
+		c.JSON(200, gin.H{"code": "fail", "msg": err.Error()})
+		return
+	}
+	err = db.DelPosition(req.Id)
+	if err == nil {
+		c.JSON(200, gin.H{"code": "ok", "data": "ok"})
+	} else {
+		c.JSON(200, gin.H{"code": "fail", "msg": err.Error()})
+	}
+}
