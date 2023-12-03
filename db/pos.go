@@ -1,6 +1,9 @@
 package db
 
-import "time"
+import (
+	"github.com/jmoiron/sqlx"
+	"time"
+)
 
 type Position struct {
 	Id         int       `json:"id" db:"id"`
@@ -26,5 +29,20 @@ func AddPosition(name string) error {
 func DelPosition(id int) error {
 	instance := GetDbInstance()
 	_, err := instance.DBInstance.Exec("delete from position where id = ?", id)
+	return err
+}
+
+func UpdateMenu(id int, name string) error {
+	_, err := GetDbInstance().DBInstance.Exec("update position set name = ? where id = ?", name, id)
+	return err
+}
+
+func UpdateMenu2(ids []int) error {
+	in, i, err := sqlx.In("update position set enabled = 0 where id in(?)", ids)
+	if err != nil {
+		return err
+	}
+	in = GetDbInstance().DBInstance.Rebind(in)
+	_, err = GetDbInstance().DBInstance.Exec(in, i...)
 	return err
 }
