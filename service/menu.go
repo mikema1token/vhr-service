@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/gin-gonic/gin"
+	"strconv"
 	"vhr-service/db"
 )
 
@@ -56,5 +57,17 @@ func DeleteMenu(c *gin.Context) {
 		c.String(500, err.Error())
 	} else {
 		c.JSON(200, gin.H{"code": "ok"})
+	}
+}
+
+func GetMenuTreeByRole(c *gin.Context) {
+	id := c.Query("id")
+	idInt, _ := strconv.Atoi(id)
+	menus, err := db.GetRoleMenus(idInt)
+	if err != nil {
+		c.JSON(200, gin.H{"code": "fail", "msg": err.Error()})
+	} else {
+		tree := BuildMenuTree(menus, 1)
+		c.JSON(200, gin.H{"code": "ok", "data": tree})
 	}
 }

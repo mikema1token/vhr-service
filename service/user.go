@@ -41,3 +41,12 @@ func UserLogout(c *gin.Context) {
 	c.SetCookie("token", cookie, 1, "/", "localhost", false, true)
 	c.JSON(200, gin.H{"status": "ok"})
 }
+
+func GetRoles(c *gin.Context) {
+	roles, err := db.GetRoles()
+	if err != nil {
+		c.JSON(200, gin.H{"code": "fail", "msg": err.Error()})
+	} else {
+		c.JSON(200, gin.H{"code": "ok", "data": roles})
+	}
+}

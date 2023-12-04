@@ -35,3 +35,32 @@ func GetUserList() ([]UserModel, error) {
 	err := dbInstance.DBInstance.Select(&userList, querySql)
 	return userList, err
 }
+
+type Role struct {
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	NameZh string `db:"nameZh" json:"nameZh"`
+}
+
+func GetRoles() ([]Role, error) {
+	var roles []Role
+	err := GetDbInstance().DBInstance.Select(&roles, "select * from role")
+	return roles, err
+}
+
+func GetRoleMenus(id int) ([]Menu, error) {
+	query := `WITH RECURSIVE MenuCTE AS (
+				  SELECT id, name, parentId
+				  FROM menu
+				  WHERE id IN (SELECT mid FROM menu_role WHERE rid = ?)
+				  UNION
+				  SELECT m.id, m.name, m.parentId
+				  FROM menu m
+				  JOIN MenuCTE cte ON m.parentId = cte.id
+				)
+				SELECT * FROM MenuCTE`
+
+	var menus []Menu
+	err := GetDbInstance().DBInstance.Select(&menus, query, id)
+	return menus, err
+}

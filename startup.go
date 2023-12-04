@@ -25,5 +25,7 @@ func main() {
 	authGroup.POST("/delete-pos", service.DelPos)
 	authGroup.POST("/update-pos", service.UpdateMenu)
 	authGroup.POST("/delete-pos2", service.DeleteMenu)
+	authGroup.GET("/list-roles", service.GetRoles)
+	authGroup.GET("/list-roles-menu", service.GetMenuTreeByRole)
 	engine.Run(":8081")
 }
